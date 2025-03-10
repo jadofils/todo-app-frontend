@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
+import axios from "axios";
 import { fetchTasks, Task } from "./Tasks/TasksControl";
 import AddTaskForm from "./Tasks/AddTaskForm";
 import EditTaskForm from "./Tasks/EditTaskForm";
-import axios from 'axios';
 
 const TaskTable: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -13,19 +13,29 @@ const TaskTable: React.FC = () => {
   const [messageType, setMessageType] = useState<"success" | "error" | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [loading, setLoading] = useState<boolean>(false); // Added loading state
 
   // Fetch tasks from the API when the component mounts
   useEffect(() => {
     const getTasks = async () => {
-      const fetchedTasks = await fetchTasks();
-      setTasks(fetchedTasks);
+      setLoading(true); // Start loading
+      try {
+        const fetchedTasks = await fetchTasks();
+        setTasks(fetchedTasks);
+      } catch (error) {
+        console.error("Error fetching tasks:", error);
+        setMessage("Error fetching tasks.");
+        setMessageType("error");
+      } finally {
+        setLoading(false); // Stop loading
+      }
     };
     getTasks();
   }, []);
 
   // Handle newly added tasks
   const handleTaskAdded = (newTask: Task) => {
-    setTasks([...tasks, newTask]);
+    setTasks((prevTasks) => [...prevTasks, newTask]);
     setShowModal(false);
     setMessage("Task added successfully!");
     setMessageType("success");
@@ -33,9 +43,11 @@ const TaskTable: React.FC = () => {
 
   // Handle task updates
   const handleTaskUpdated = (updatedTask: Task) => {
-    setTasks(tasks.map(task => 
-      task.id === updatedTask.id ? updatedTask : task
-    ));
+    setTasks((prevTasks) =>
+      prevTasks.map((task) =>
+        task.id === updatedTask.id ? updatedTask : task
+      )
+    );
     setShowModal(false);
     setSelectedTask(null);
     setIsEditMode(false);
@@ -46,13 +58,15 @@ const TaskTable: React.FC = () => {
   // Handle task deletion
   const handleDeleteConfirm = async () => {
     if (taskToDelete === null) return;
-    
+
+    setLoading(true); // Start loading
     try {
-      const response = await axios.delete(`https://todo-app-ingata-1.onrender.com/api/tasks/${taskToDelete}`);
-      
+      const response = await axios.delete(
+        `https://todo-app-ingata-1.onrender.com/api/tasks/${taskToDelete}`
+      );
+
       if (response.status === 200 || response.status === 204) {
-        // Remove the deleted task from the tasks array
-        setTasks(tasks.filter(task => task.id !== taskToDelete));
+        setTasks((prevTasks) => prevTasks.filter((task) => task.id !== taskToDelete));
         setMessage("Task deleted successfully!");
         setMessageType("success");
       } else {
@@ -64,43 +78,33 @@ const TaskTable: React.FC = () => {
       setMessage("Error deleting task.");
       setMessageType("error");
     } finally {
+      setLoading(false); // Stop loading
       setShowDeleteModal(false);
       setTaskToDelete(null);
     }
   };
 
-  // Prepare for delete with confirmation
+  // Handle the delete button click
   const handleDeleteClick = (taskId: number) => {
     setTaskToDelete(taskId);
     setShowDeleteModal(true);
   };
 
-  // Get background class based on task status
-  const getStatusClass = (status: string) => {
-    switch (status) {
-      case "pending":
-        return "bg-warning";
-      case "in_progress":
-        return "bg-info";
-      case "completed":
-        return "bg-success";
-      case "cancelled":
-        return "bg-danger";
-      default:
-        return "";
-    }
-  };
-
-  // Fetch task details based on task ID
+  // Fetch task details for edit/view
   const fetchTaskById = async (taskId: number) => {
+    setLoading(true); // Start loading
     try {
-      const response = await axios.get(`https://todo-app-ingata-1.onrender.com/api/tasks/${taskId}`);
+      const response = await axios.get(
+        `https://todo-app-ingata-1.onrender.com/api/tasks/${taskId}`
+      );
       setSelectedTask(response.data);
       setShowModal(true);
     } catch (error) {
       console.error("Error fetching task data:", error);
       setMessage("Error fetching task data.");
       setMessageType("error");
+    } finally {
+      setLoading(false); // Stop loading
     }
   };
 
@@ -123,16 +127,32 @@ const TaskTable: React.FC = () => {
     setIsEditMode(false);
   };
 
+  // Get background class based on task status
+  const getStatusClass = (status: string) => {
+    switch (status) {
+      case "pending":
+        return "bg-warning";
+      case "in_progress":
+        return "bg-info";
+      case "completed":
+        return "bg-success";
+      case "cancelled":
+        return "bg-danger";
+      default:
+        return "";
+    }
+  };
+
   return (
     <div className="container mt-[10vh]">
       <div className="d-flex justify-content-between align-items-center mb-3">
         <h2>Tasks</h2>
-        <button 
+        <button
           onClick={() => {
             setIsEditMode(false);
             setSelectedTask(null);
             setShowModal(true);
-          }} 
+          }}
           className="btn btn-primary"
         >
           <i className="bi bi-plus-circle me-1"></i> Add Task
@@ -143,6 +163,15 @@ const TaskTable: React.FC = () => {
       {message && (
         <div className={`alert ${messageType === "success" ? "alert-success" : "alert-danger"}`}>
           {message}
+        </div>
+      )}
+
+      {/* Show loading spinner when loading */}
+      {loading && (
+        <div className="text-center">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </div>
         </div>
       )}
 
@@ -159,10 +188,7 @@ const TaskTable: React.FC = () => {
               </div>
               <div className="modal-body">
                 {selectedTask && isEditMode ? (
-                  <EditTaskForm 
-                    task={selectedTask} 
-                    onTaskUpdated={handleTaskUpdated} 
-                  />
+                  <EditTaskForm task={selectedTask} onTaskUpdated={handleTaskUpdated} />
                 ) : selectedTask && !isEditMode ? (
                   <div className="container">
                     <h3 className="mb-3">Task Details</h3>
@@ -177,24 +203,18 @@ const TaskTable: React.FC = () => {
                         <strong>Status:</strong> {selectedTask.status}
                       </div>
                       <div className="mb-3">
-                        <strong>Due Date:</strong> {selectedTask.dueDate  as unknown as string}
+                        <strong>Due Date:</strong> {new Date(selectedTask.dueDate).toLocaleDateString()}
                       </div>
                       <div className="mb-3">
-                        <strong>Start Date:</strong> {selectedTask.startDate}
+                        <strong>Start Date:</strong> {new Date(selectedTask.startDate).toLocaleDateString()}
                       </div>
-                      <button
-                        onClick={() => setIsEditMode(true)}
-                        className="btn btn-primary w-100"
-                      >
+                      <button onClick={() => setIsEditMode(true)} className="btn btn-primary w-100">
                         Edit This Task
                       </button>
                     </div>
                   </div>
                 ) : (
-                  <AddTaskForm
-                    userId={1}
-                    onTaskAdded={handleTaskAdded}
-                  />
+                  <AddTaskForm onTaskAdded={handleTaskAdded} userId={0} />
                 )}
               </div>
             </div>
@@ -202,50 +222,7 @@ const TaskTable: React.FC = () => {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && (
-        <div className="modal fade show d-block" style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}>
-          <div className="modal-dialog">
-            <div className="modal-content">
-              <div className="modal-header bg-danger text-white">
-                <h5 className="modal-title">Confirm Delete</h5>
-                <button 
-                  type="button" 
-                  className="btn-close" 
-                  onClick={() => {
-                    setShowDeleteModal(false);
-                    setTaskToDelete(null);
-                  }}
-                ></button>
-              </div>
-              <div className="modal-body">
-                <p>Are you sure you want to delete this task? This action cannot be undone.</p>
-              </div>
-              <div className="modal-footer">
-                <button 
-                  type="button" 
-                  className="btn btn-secondary" 
-                  onClick={() => {
-                    setShowDeleteModal(false);
-                    setTaskToDelete(null);
-                  }}
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="button" 
-                  className="btn btn-danger" 
-                  onClick={handleDeleteConfirm}
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Task Table with Scrollable Y-axis */}
+      {/* Task Table */}
       <div className="table-responsive" style={{ maxHeight: "400px", overflowX: "auto" }}>
         <table className="table table-striped table-bordered w-auto">
           <thead className="table-dark">

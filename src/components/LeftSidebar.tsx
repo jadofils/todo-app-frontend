@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { fetchUsers, User } from './Users/UserControl';
+import { ClipLoader } from 'react-spinners'; // Import a spinner component
 
 interface LeftSidebarProps {
   onSelectUser: (user: User) => void;
@@ -12,11 +13,19 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({
 }) => {
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(true); // Add loading state
 
   useEffect(() => {
     const getUsers = async () => {
-      const fetchedUsers = await fetchUsers();
-      setUsers(fetchedUsers);
+      setLoading(true); // Start loading
+      try {
+        const fetchedUsers = await fetchUsers();
+        setUsers(fetchedUsers);
+      } catch (error) {
+        console.error('Error fetching users:', error);
+      } finally {
+        setLoading(false); // Stop loading
+      }
     };
     getUsers();
   }, []);
@@ -49,54 +58,61 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({
           onChange={(e) => setSearchTerm(e.target.value)}
         />
       </div>
-      <div
-        className="list-group"
-        style={{ maxHeight: '400px', overflowY: 'auto', overflowX: 'hidden' }}
-      >
-        {filteredUsers.map((user) => (
-          <button
-            key={user.id}
-            type="button"
-            onClick={() => onSelectUser(user)}
-            className={`list-group-item list-group-item-action d-flex flex-column align-items-start ${
-              selectedUser && selectedUser.id === user.id
-                ? 'bg-warning text-dark'
-                : ''
-            }`}
-            style={{
-              border: 'none',
-              padding: '0.75rem 1.25rem',
-              textAlign: 'left',
-            }}
-          >
-            <div className="d-flex align-items-center w-100 mb-1">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="20"
-                height="20"
-                fill="currentColor"
-                className="bi bi-person-circle me-2"
-                viewBox="0 0 16 16"
-              >
-                <path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" />
-                <path
-                  fillRule="evenodd"
-                  d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8zm8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1z"
-                />
-              </svg>
-              <div>
-                <div className="fw-bold">
-                  {user.firstName} {user.lastName}
+      {loading ? (
+        <div className="d-flex justify-content-center align-items-center">
+          {/* Use the ClipLoader spinner from react-spinners */}
+          <ClipLoader color="#36d7b7" loading={loading} size={50} />
+        </div>
+      ) : (
+        <div
+          className="list-group"
+          style={{ maxHeight: '400px', overflowY: 'auto', overflowX: 'hidden' }}
+        >
+          {filteredUsers.map((user) => (
+            <button
+              key={user.id}
+              type="button"
+              onClick={() => onSelectUser(user)}
+              className={`list-group-item list-group-item-action d-flex flex-column align-items-start ${
+                selectedUser && selectedUser.id === user.id
+                  ? 'bg-warning text-dark'
+                  : ''
+              }`}
+              style={{
+                border: 'none',
+                padding: '0.75rem 1.25rem',
+                textAlign: 'left',
+              }}
+            >
+              <div className="d-flex align-items-center w-100 mb-1">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  fill="currentColor"
+                  className="bi bi-person-circle me-2"
+                  viewBox="0 0 16 16"
+                >
+                  <path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" />
+                  <path
+                    fillRule="evenodd"
+                    d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8zm8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1z"
+                  />
+                </svg>
+                <div>
+                  <div className="fw-bold">
+                    {user.firstName} {user.lastName}
+                  </div>
+                  <div className="text-muted small">{user.email}</div>
                 </div>
-                <div className="text-muted small">{user.email}</div>
               </div>
-            </div>
-            <small className="text-muted">
-              Created: {formatDate(user.createdAt)}
-            </small>
-          </button>
-        ))}
-      </div>
+              <small className="text-muted">
+                Created: {formatDate(user.createdAt)}
+              </small>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

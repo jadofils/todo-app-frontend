@@ -8,26 +8,30 @@ import { fetchTasks, Task } from './components/Tasks/TasksControl';
 import './App.css';
 
 const App: React.FC = () => {
-  const [selectedUser, setSelectedUser] = useState<User | null>(null); // Track selected user
-  const [tasks, setTasks] = useState<Task[]>([]); // Track user-specific tasks
-  const [users, setUsers] = useState<User[]>([]); // Track all users
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [usersLoading, setUsersLoading] = useState(true);
+  const [tasksLoading, setTasksLoading] = useState(true);
 
-  // Fetch users on component mount
   useEffect(() => {
     const loadUsers = async () => {
+      setUsersLoading(true);
       try {
         const fetchedUsers = await fetchUsers();
         setUsers(fetchedUsers);
       } catch (error) {
         console.error('Error fetching users:', error);
+      } finally {
+        setUsersLoading(false);
       }
     };
     loadUsers();
   }, []);
 
-  // Fetch tasks whenever the selected user changes
   useEffect(() => {
     const loadTasks = async () => {
+      setTasksLoading(true);
       if (selectedUser) {
         try {
           const allTasks = await fetchTasks();
@@ -36,15 +40,17 @@ const App: React.FC = () => {
         } catch (error) {
           console.error('Error fetching user tasks:', error);
           setTasks([]);
+        } finally {
+          setTasksLoading(false);
         }
       } else {
-        setTasks([]); // Clear tasks if no user is selected
+        setTasks([]);
+        setTasksLoading(false);
       }
     };
     loadTasks();
   }, [selectedUser]);
 
-  // Handlers for various task actions
   const handleSelectUser = (user: User) => {
     setSelectedUser(user);
   };
@@ -65,31 +71,37 @@ const App: React.FC = () => {
     console.log('View Task functionality triggered for Task ID:', taskId);
   };
 
-  // Render the app layout
   return (
     <div className="h-screen flex flex-col bg-gray-50">
-      {/* Navbar */}
       <Navbar />
-
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar for User Selection */}
         <div className="w-1/4 p-4 bg-gray-100">
-          <LeftSidebar
-            users={users} // Pass users to the sidebar
-            onSelectUser={handleSelectUser} // Selection handler
-            selectedUser={selectedUser} // Highlight the selected user
-          />
+          {usersLoading ? (
+            <div className="flex justify-center items-center">
+              <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div>
+            </div>
+          ) : (
+            <LeftSidebar
+              users={users}
+              onSelectUser={handleSelectUser}
+              selectedUser={selectedUser}
+            />
+          )}
         </div>
-
-        {/* Task Table for User's Tasks */}
         <div className="flex-1 p-4 overflow-y-auto">
-          <TaskTable
-            tasks={tasks} // Pass user's tasks
-            onAddTask={handleAddTask} // Add task handler
-            onEditTask={handleEditTask} // Edit task handler
-            onDeleteTask={handleDeleteTask} // Delete task handler
-            onViewTask={handleViewTask} // View task handler
-          />
+          {tasksLoading ? (
+            <div className="flex justify-center items-center">
+              <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div>
+            </div>
+          ) : (
+            <TaskTable
+              tasks={tasks}
+              onAddTask={handleAddTask}
+              onEditTask={handleEditTask}
+              onDeleteTask={handleDeleteTask}
+              onViewTask={handleViewTask}
+            />
+          )}
         </div>
       </div>
     </div>

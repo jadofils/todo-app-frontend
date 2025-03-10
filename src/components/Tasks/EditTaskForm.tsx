@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { Task } from "../Tasks/TasksControl";
+import { RingLoader } from "react-spinners"; // Import RingLoader
 
 interface EditTaskFormProps {
-  task: Task; // Pass the task to be edited
-  onTaskUpdated: (task: Task) => void; // Callback to update the task in the parent component
+  task: Task;
+  onTaskUpdated: (task: Task) => void;
 }
 
 const EditTaskForm: React.FC<EditTaskFormProps> = ({ task, onTaskUpdated }) => {
@@ -15,8 +16,9 @@ const EditTaskForm: React.FC<EditTaskFormProps> = ({ task, onTaskUpdated }) => {
     startDate: task.startDate,
   });
 
-  const [message, setMessage] = useState<string | null>(null); // Message state
-  const [messageType, setMessageType] = useState<string>(""); // Message type state
+  const [message, setMessage] = useState<string | null>(null);
+  const [messageType, setMessageType] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false); // Add loading state
 
   useEffect(() => {
     setFormData({
@@ -37,8 +39,10 @@ const EditTaskForm: React.FC<EditTaskFormProps> = ({ task, onTaskUpdated }) => {
 
     const updatedTask = {
       ...formData,
-      id: task.id, // Ensure task ID is included for update
+      id: task.id,
     };
+
+    setLoading(true); // Set loading to true before the request
 
     try {
       const response = await fetch(`https://todo-app-ingata-1.onrender.com/api/tasks/${task.id}`, {
@@ -51,7 +55,7 @@ const EditTaskForm: React.FC<EditTaskFormProps> = ({ task, onTaskUpdated }) => {
 
       if (response.ok) {
         const updatedTaskData = await response.json();
-        onTaskUpdated(updatedTaskData); // Pass the updated task to the parent
+        onTaskUpdated(updatedTaskData);
         setMessage("Task updated successfully!");
         setMessageType("success");
       } else {
@@ -62,6 +66,8 @@ const EditTaskForm: React.FC<EditTaskFormProps> = ({ task, onTaskUpdated }) => {
       console.error("Error updating task:", error);
       setMessage("Error updating task.");
       setMessageType("error");
+    } finally {
+      setLoading(false); // Set loading to false after the request finishes
     }
   };
 
@@ -69,7 +75,6 @@ const EditTaskForm: React.FC<EditTaskFormProps> = ({ task, onTaskUpdated }) => {
     <div className="container mt-4">
       <h3 className="mb-3">Edit Task</h3>
 
-      {/* Display the message */}
       {message && (
         <div
           className={`alert ${messageType === "success" ? "alert-success" : "alert-danger"} mb-3`}
@@ -78,7 +83,14 @@ const EditTaskForm: React.FC<EditTaskFormProps> = ({ task, onTaskUpdated }) => {
         </div>
       )}
 
+      {loading && (
+        <div className="d-flex justify-content-center mb-3">
+          <RingLoader color="#36D7B7" loading={loading} size={50} />
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="p-4 border rounded bg-light">
+        {/* Form inputs... */}
         <div className="mb-3">
           <label className="form-label">Title</label>
           <input
@@ -133,8 +145,8 @@ const EditTaskForm: React.FC<EditTaskFormProps> = ({ task, onTaskUpdated }) => {
           />
         </div>
 
-        <button type="submit" className="btn btn-primary w-100">
-          Update Task
+        <button type="submit" className="btn btn-primary w-100" disabled={loading}>
+          {loading ? "Updating Task..." : "Update Task"}
         </button>
       </form>
     </div>
