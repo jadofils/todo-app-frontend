@@ -1,0 +1,33 @@
+# Environment variables
+.env
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Logs
+*.log
+
+# Database files
+*.sqlite
+*.db
+
+# Coverage reports
+coverage/
+
+# Secret files
+secrets/
+keys/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# IDE specific files.
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
